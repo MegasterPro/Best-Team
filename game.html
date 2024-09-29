@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bataille d'équipes Naruto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-image: url(bg.png);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+        }
+        .cards-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 200px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            color: black;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .card.selected {
+            border: 3px solid #4CAF50;
+        }
+        img {
+            max-width: 150px;
+            border-radius: 50%;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        h1 {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #restart-button {
+            background-color: #f44336;
+        }
+        @media (max-width: 600px) {
+            .card {
+                width: 150px;
+                padding: 10px;
+            }
+            .card img {
+                max-width: 100px;
+            }
+            .card h2 {
+                font-size: 1em;
+            }
+            .card p {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Fais ton choix</h1>
+    <div class="cards-container" id="cards-container"></div>
+    <button id="battle-button" style="display: none;">Lancer la bataille</button>
+    <button id="restart-button" style="display: none;">Recommencer</button>
+    <div id="result"></div>
+
+    <script>
+        let characters = [];
+        let selectedCard = null;
+        let computerCard = null;
+
+        async function fetchCharacters() {
+            try {
+                const response = await fetch('https://narutodb.xyz/api/character');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Données reçues:', data); // Pour le débogage
+                characters = data.characters || [];
+                if (characters.length === 0) {
+                    throw new Error('Aucun personnage trouvé dans les données');
+                }
+                displayRandomCharacters();
+            } catch (error) {
+                console.error('Erreur:', error);
+                document.getElementById('cards-container').innerHTML = `<h2>Erreur de chargement: ${error.message}</h2>`;
+            }
+        }
+
+        function displayRandomCharacters() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            
+            if (characters.length < 3) {
+                container.innerHTML = '<h2>Pas assez de personnages disponibles</h2>';
+                return;
+            }
+
+            for (let i = 0; i < 3; i++) {
+                const randomIndex = Math.floor(Math.random() * characters.length);
+                const character = characters[randomIndex];
+                const card = createCharacterCard(character);
+                container.appendChild(card);
+            }
+        }
+
+        function createCharacterCard(character) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <h2>${character.name || 'Inconnu'}</h2>
+                <img src="${character.images && character.images[0] ? character.images[0] : 'placeholder.jpg'}" alt="${character.name || 'Inconnu'}">
+                <p><strong>Clan:</strong> ${character.personal && character.personal.clan ? character.personal.clan : 'Inconnu'}</p>
+                <p><strong>Village:</strong> ${character.personal && character.personal.affiliation ? character.personal.affiliation : 'Inconnu'}</p>
+            `;
+            card.addEventListener('click', () => selectCard(card, character));
+            return card;
+        }
+
+        function selectCard(card, character) {
+            if (selectedCard) {
+                selectedCard.classList.remove('selected');
+            }
+            selectedCard = card;
+            card.classList.add('selected');
+            document.getElementById('battle-button').style.display = 'block';
+            computerCard = characters[Math.floor(Math.random() * characters.length)];
+        }
+
+        function battle() {
+            if (!selectedCard) {
+                alert('Veuillez sélectionner une carte avant de lancer la bataille.');
+                return;
+            }
+
+            const playerPower = Math.random() * 100;
+            const computerPower = Math.random() * 100;
+
+            let result = '';
+            if (playerPower > computerPower) {
+                result = `Vous avez gagné ! Votre équipe (${selectedCard.querySelector('h2').textContent}) a battu l'équipe de l'ordinateur (${computerCard.name}).`;
+            } else if (playerPower < computerPower) {
+                result = `Vous avez perdu. L'équipe de l'ordinateur (${computerCard.name}) a battu votre équipe (${selectedCard.querySelector('h2').textContent}).`;
+            } else {
+                result = "Match nul !";
+            }
+
+            document.getElementById('result').textContent = result;
+            document.getElementById('restart-button').style.display = 'block';
+            document.getElementById('battle-button').style.display = 'none';
+        }
+
+        function restart() {
+            selectedCard = null;
+            computerCard = null;
+            document.getElementById('result').textContent = '';
+            document.getElementById('restart-button').style.display = 'none';
+            document.getElementById('battle-button').style.display = 'none';
+            displayRandomCharacters();
+        }
+
+        document.getElementById('battle-button').addEventListener('click', battle);
+        document.getElementById('restart-button').addEventListener('click', restart);
+
+        fetchCharacters();
+    </script>
+</body>
+</html>
